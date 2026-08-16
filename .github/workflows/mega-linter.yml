@@ -48,6 +48,7 @@ jobs:
               contains(fromJSON('["refs/heads/main", "refs/heads/master"]'), github.ref)
             }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DISABLE_LINTERS: REPOSITORY_GRYPE,SPELL_LYCHEE
 
       - name: Archive production artifacts
