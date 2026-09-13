@@ -5,28 +5,35 @@ name: MegaLinter
 
 "on":
   push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
-      - master
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.ref }}-${{ github.workflow }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
 
 jobs:
   megalinter:
     name: MegaLinter
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
+    if: github.event.pull_request.draft != true
     permissions:
       contents: read
+      pull-requests: write # for the MegaLinter pull request reporter
+      issues: write # for the MegaLinter PR conversation comment reporter
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -37,27 +44,28 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # Full history is required to lint only files changed since the base ref.
           fetch-depth: 0
+          persist-credentials: false
 
+      # Linter selection, reporters, and fix behavior live in .mega-linter.yml.
+      # PowerShell is linted by the dedicated PowerShell workflow (PSScriptAnalyzer + SARIF).
       - name: MegaLinter
-        uses: oxsecurity/megalinter/flavors/dotnet@9949bad031045f366be2467e00e8371a7328a2e2 # v10.1.0
+        uses: oxsecurity/megalinter/flavors/documentation@9949bad031045f366be2467e00e8371a7328a2e2 # v10.1.0
         id: ml
         env:
-          DISABLE: COPYPASTE
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: >-
             ${{
-              github.event_name == 'push' &&
-              contains(fromJSON('["refs/heads/main", "refs/heads/master"]'), github.ref)
+              github.event_name != 'pull_request'
             }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DISABLE_LINTERS: REPOSITORY_GRYPE,SPELL_LYCHEE
 
       - name: Archive production artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: success() || failure()
+        if: ${{ !cancelled() }}
         with:
           name: MegaLinter reports
+          retention-days: 7
           path: |
             megalinter-reports
             mega-linter.log

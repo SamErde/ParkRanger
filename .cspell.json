@@ -5,6 +5,7 @@
     "aspf",
     "Cloudflare",
     "codeql",
+    "CODESPELL",
     "DKIM",
     "DMARC",
     "domainkey",
@@ -22,7 +23,9 @@
     "pwsh",
     "Route53",
     "SARIF",
+    "SYFT",
     "lockdown",
-    "sarif"
+    "sarif",
+    "zizmor"
   ]
 }
