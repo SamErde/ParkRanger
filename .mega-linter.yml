@@ -45,10 +45,11 @@ UPDATED_SOURCES_REPORTER: false
 # Formatter opinions are informational and must not fail the build.
 FORMATTERS_DISABLE_ERRORS: true
 
-# Reporting: a summary comment on pull requests plus the run job summary.
+# Reporting: a summary comment on pull requests plus the markdown summary,
+# which MegaLinter also publishes to the CI job summary.
 GITHUB_COMMENT_REPORTER: true
 GITHUB_STATUS_REPORTER: false
-JOB_SUMMARY_REPORTER: true
+MARKDOWN_SUMMARY_REPORTER: true
 TEXT_REPORTER: true
 
 FILTER_REGEX_EXCLUDE: '(megalinter-reports/|\.git/|LICENSE)'
