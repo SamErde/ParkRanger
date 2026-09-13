@@ -32,7 +32,8 @@ jobs:
     if: github.event.pull_request.draft != true
     permissions:
       contents: read
-      pull-requests: write # for the MegaLinter pull request comment reporter
+      pull-requests: write # for the MegaLinter pull request reporter
+      issues: write # for the MegaLinter PR conversation comment reporter
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
