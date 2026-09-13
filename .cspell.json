@@ -25,6 +25,7 @@
     "SARIF",
     "SYFT",
     "lockdown",
-    "sarif"
+    "sarif",
+    "zizmor"
   ]
 }

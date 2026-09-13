@@ -54,8 +54,6 @@ jobs:
         id: ml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # zizmor uses GH_TOKEN for its online audits of referenced actions.
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: >-
             ${{
               github.event_name != 'pull_request'

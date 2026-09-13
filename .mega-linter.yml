@@ -39,8 +39,11 @@ DISABLE:
 
 # Never modify sources: findings are reported, not fixed.
 APPLY_FIXES: none
-APPLY_FIXES_EVENT: none
 UPDATED_SOURCES_REPORTER: false
+
+# Keep zizmor's audits local: its online checks need a token with access to
+# every referenced action repository and fail the run when unavailable.
+ACTION_ZIZMOR_ARGUMENTS: --offline
 
 # Formatter opinions are informational and must not fail the build.
 FORMATTERS_DISABLE_ERRORS: true
