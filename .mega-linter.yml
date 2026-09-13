@@ -1,0 +1,57 @@
+# MegaLinter configuration
+# Documentation: https://megalinter.io/latest/config-file/
+#
+# PowerShell is intentionally not linted here: the dedicated PowerShell workflow
+# (.github/workflows/powershell.yml) runs PSScriptAnalyzer and uploads SARIF results.
+---
+# Only the descriptors that match content actually present in this repository.
+ENABLE:
+  - ACTION # GitHub Actions workflows
+  - JSON # .cspell.json and other JSON files
+  - MARKDOWN # README.md and docs
+  - REPOSITORY # repository-wide checks (secrets, file naming, git)
+  - SPELL # cspell, driven by .cspell.json
+  - YAML # workflows, pre-commit config
+
+DISABLE_LINTERS:
+  # No dependency manifests / SBOM needs in a script-only PowerShell module.
+  - REPOSITORY_GRYPE
+  - REPOSITORY_SYFT
+  - REPOSITORY_TRIVY_SBOM
+  - REPOSITORY_OSV_SCANNER
+  # Secret scanning is already covered by GitGuardian; keep secretlint only.
+  - REPOSITORY_TRUFFLEHOG
+  - REPOSITORY_BETTERLEAKS
+  # No infrastructure-as-code in this repository.
+  - REPOSITORY_CHECKOV
+  # .cspell.json already drives SPELL_CSPELL; the rest are redundant or flaky.
+  - SPELL_LYCHEE
+  - SPELL_PROSELINT
+  - SPELL_VALE
+  - SPELL_CODESPELL
+  # Formatters that would only ever ask for rewrites.
+  - MARKDOWN_MARKDOWN_TABLE_FORMATTER
+  - JSON_PRETTIER
+  - YAML_PRETTIER
+
+DISABLE:
+  - COPYPASTE
+
+# Never modify sources: findings are reported, not fixed.
+APPLY_FIXES: none
+APPLY_FIXES_EVENT: none
+UPDATED_SOURCES_REPORTER: false
+
+# Formatter opinions are informational and must not fail the build.
+FORMATTERS_DISABLE_ERRORS: true
+
+# Reporting: a summary comment on pull requests plus the run job summary.
+GITHUB_COMMENT_REPORTER: true
+GITHUB_STATUS_REPORTER: false
+JOB_SUMMARY_REPORTER: true
+TEXT_REPORTER: true
+
+FILTER_REGEX_EXCLUDE: '(megalinter-reports/|\.git/|LICENSE)'
+
+PRINT_ALPACA: false
+SHOW_ELAPSED_TIME: true
