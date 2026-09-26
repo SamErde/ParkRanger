@@ -392,3 +392,47 @@ function Invoke-ParkRangerCloudflareTxtRecordSync {
         Name   = $recordName
     }
 }
+
+function Invoke-ParkRangerCloudflareMxRecordSync {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [object]$Context,
+
+        [Parameter(Mandatory)]
+        [object]$Zone,
+
+        [Parameter(Mandatory)]
+        [object]$Record
+    )
+
+    $recordName = ConvertTo-ParkRangerCloudflareRecordName -RecordName $Record.Name -ZoneName $Zone.Name
+    $existingRecords = Get-ParkRangerCloudflareDnsRecord -Context $Context -ZoneId $Zone.Id -RecordType MX -RecordName $recordName
+
+    # For Null MX, we match on the exact content "0 ."
+    $match = $existingRecords | Where-Object { $_.content -eq $Record.Content } | Select-Object -First 1
+
+    if ($null -ne $match) {
+        return [PSCustomObject]@{
+            Action = 'Unchanged'
+            Id     = $match.id
+            Name   = $recordName
+        }
+    }
+
+    $body = @{
+        type     = 'MX'
+        name     = $recordName
+        content  = $Record.Content
+        ttl      = $Record.Ttl
+        priority = 0
+    }
+
+    $createResponse = Invoke-ParkRangerCloudflareRequest -Context $Context -Method Post -Path "zones/$($Zone.Id)/dns_records" -Body $body
+
+    [PSCustomObject]@{
+        Action = 'Created'
+        Id     = $createResponse.result.id
+        Name   = $recordName
+    }
+}

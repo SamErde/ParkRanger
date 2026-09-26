@@ -7,14 +7,23 @@ BeforeDiscovery {
 
 Describe 'ParkRanger records' {
     InModuleScope ParkRanger {
-        It 'returns the deny-all SPF, DKIM, and DMARC TXT records' {
+        It 'returns the deny-all Null MX, SPF, DKIM, and DMARC records' {
             $records = @(Get-ParkRangerDesiredEmailProtectionRecordSet -Ttl 600)
 
-            $records | Should -HaveCount 3
-            $records[0].Content | Should -BeExactly 'v=spf1 -all'
-            $records[1].Content | Should -BeExactly 'v=DKIM1; p='
-            $records[2].Content | Should -BeExactly 'v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s'
-            $records.Ttl | Should -Be @(600, 600, 600)
+            $records | Should -HaveCount 4
+            $records[0].Type | Should -BeExactly 'MX'
+            $records[0].Name | Should -BeExactly '@'
+            $records[0].Content | Should -BeExactly '0 .'
+            $records[1].Type | Should -BeExactly 'TXT'
+            $records[1].Name | Should -BeExactly '@'
+            $records[1].Content | Should -BeExactly 'v=spf1 -all'
+            $records[2].Type | Should -BeExactly 'TXT'
+            $records[2].Name | Should -BeExactly '*._domainkey'
+            $records[2].Content | Should -BeExactly 'v=DKIM1; p='
+            $records[3].Type | Should -BeExactly 'TXT'
+            $records[3].Name | Should -BeExactly '_dmarc'
+            $records[3].Content | Should -BeExactly 'v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s'
+            $records.Ttl | Should -Be @(600, 600, 600, 600)
         }
     }
 }
@@ -341,6 +350,83 @@ Describe 'Cloudflare API helpers' {
             }
 
             $result = Invoke-ParkRangerCloudflareTxtRecordSync -Context $script:Context -Zone $zone -Record $record
+
+            $result.Action | Should -Be 'Created'
+            Should -Invoke Invoke-ParkRangerCloudflareRequest -Exactly 1 -ParameterFilter { $Method -eq 'Post' }
+        }
+    }
+}
+
+Describe 'Cloudflare MX record sync' {
+    InModuleScope ParkRanger {
+        BeforeEach {
+            $secureToken = [SecureString]::new()
+            foreach ($character in 'token'.ToCharArray()) {
+                $secureToken.AppendChar($character)
+            }
+
+            $secureToken.MakeReadOnly()
+
+            $script:Context = [PSCustomObject]@{
+                Provider = 'Cloudflare'
+                ApiToken = $secureToken
+                BaseUri  = 'https://api.cloudflare.com/client/v4'
+                PageSize = 2
+            }
+        }
+
+        It 'does not create duplicate MX records when the Null MX already exists' {
+            Mock Get-ParkRangerCloudflareDnsRecord {
+                [PSCustomObject]@{
+                    id      = 'mx-1'
+                    name    = 'example.com'
+                    type    = 'MX'
+                    content = '0 .'
+                }
+            }
+            Mock Invoke-ParkRangerCloudflareRequest {
+                throw 'No write request should be made.'
+            }
+
+            $zone = [PSCustomObject]@{
+                Id   = 'zone-1'
+                Name = 'example.com'
+            }
+            $record = [PSCustomObject]@{
+                Name    = '@'
+                Content = '0 .'
+                Ttl     = 3600
+                Type    = 'MX'
+            }
+
+            $result = Invoke-ParkRangerCloudflareMxRecordSync -Context $script:Context -Zone $zone -Record $record
+
+            $result.Action | Should -Be 'Unchanged'
+            Should -Invoke Invoke-ParkRangerCloudflareRequest -Exactly 0
+        }
+
+        It 'creates a Null MX record when no matching record exists' {
+            Mock Get-ParkRangerCloudflareDnsRecord { @() }
+            Mock Invoke-ParkRangerCloudflareRequest {
+                [PSCustomObject]@{
+                    result = [PSCustomObject]@{
+                        id = 'mx-1'
+                    }
+                }
+            } -ParameterFilter { $Method -eq 'Post' }
+
+            $zone = [PSCustomObject]@{
+                Id   = 'zone-1'
+                Name = 'example.com'
+            }
+            $record = [PSCustomObject]@{
+                Name    = '@'
+                Content = '0 .'
+                Ttl     = 3600
+                Type    = 'MX'
+            }
+
+            $result = Invoke-ParkRangerCloudflareMxRecordSync -Context $script:Context -Zone $zone -Record $record
 
             $result.Action | Should -Be 'Created'
             Should -Invoke Invoke-ParkRangerCloudflareRequest -Exactly 1 -ParameterFilter { $Method -eq 'Post' }
