@@ -244,15 +244,23 @@ function Test-ParkRangerCloudflareZoneHasMxRecord {
     $response = Invoke-ParkRangerCloudflareRequest -Context $Context -Method Get -Path "zones/$($Zone.Id)/dns_records" -Query @{
         type     = 'MX'
         page     = 1
-        per_page = 1
-    }
-
-    if ($null -ne $response.result_info -and $null -ne $response.result_info.total_count) {
-        return [int]$response.result_info.total_count -gt 0
+        per_page = 100
     }
 
     $resultItems = if ($null -eq $response.result) { @() } else { @($response.result) }
-    $resultItems.Count -gt 0
+
+    # Check if any MX record is NOT a Null MX (priority 0, exchange ".")
+    foreach ($record in $resultItems) {
+        $priority = if ($record.priority) { [int]$record.priority } elseif ($record.content -match '^\s*(\d+)\s+') { [int]$matches[1] } else { -1 }
+        $exchange = if ($record.exchange) { $record.exchange.Trim() } elseif ($record.content -match '^\s*\d+\s+(\S+)') { $matches[1].Trim() } else { $record.content.Trim() }
+
+        # Null MX has priority 0 and exchange "."
+        if ($priority -ne 0 -or $exchange -ne '.') {
+            return $true
+        }
+    }
+
+    return $false
 }
 
 function ConvertTo-ParkRangerCloudflareRecordName {

@@ -3,7 +3,7 @@
 **Formerly known as *Zero Email Domain*.**
 
 ParkRanger automatically creates "reject all" SPF, DKIM, and DMARC DNS records
-in domains that contain no MX records.
+in domains that contain no MX records (Null MX records are treated as no MX records).
 
 The project is a PowerShell module plus thin command scripts. The current
 implementation supports Cloudflare and is designed so other DNS providers can be
@@ -54,7 +54,7 @@ Limit processing to specific zones:
 
 ## Records
 
-For zones without MX records, the command creates or updates these TXT records:
+For zones without MX records (or with only Null MX records), the command creates or updates these TXT records:
 
 | Purpose | Name           | Content                                                |
 | ------- | -------------- | ------------------------------------------------------ |
@@ -62,7 +62,7 @@ For zones without MX records, the command creates or updates these TXT records:
 | DKIM    | `*._domainkey` | `v=DKIM1; p=`                                         |
 | DMARC   | `_dmarc`       | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s`      |
 
-The command skips zones that already have MX records.
+The command skips zones that already have non-Null MX records. A Null MX record (priority 0, exchange ".") is treated as if no MX record exists.
 
 ## Provider support
 
@@ -97,7 +97,7 @@ Invoke-Pester -Path .\Tests
 
 - [ ] Add domain status detection for dormant, non-sending, active, and mixed
       zones.
-- [ ] Add null MX support for domains that do not receive mail.
+- [x] Add null MX support for domains that do not receive mail.
 - [ ] Add CAA policy support for dormant-domain lockdown and app-domain CA
       restriction.
 - [ ] Add subdomain takeover and stale DNS record audits.

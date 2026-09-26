@@ -141,6 +141,35 @@ Describe 'Cloudflare API helpers' {
             Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=1' -and $Uri -match 'type=MX' }
         }
 
+        It 'treats Null MX (priority 0, exchange ".") as no MX records' {
+            Mock Invoke-RestMethod {
+                [PSCustomObject]@{
+                    success = $true
+                    result  = @(
+                        [PSCustomObject]@{
+                            id      = 'mx-1'
+                            type    = 'MX'
+                            name    = 'example.com'
+                            content = '0 .'
+                            priority = 0
+                            exchange = '.'
+                        }
+                    )
+                    result_info = [PSCustomObject]@{
+                        total_count = 1
+                    }
+                }
+            }
+
+            $zone = [PSCustomObject]@{
+                Id   = 'zone-1'
+                Name = 'example.com'
+            }
+
+            Test-ParkRangerCloudflareZoneHasMxRecord -Context $script:Context -Zone $zone | Should -BeFalse
+            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=1' -and $Uri -match 'type=MX' }
+        }
+
         It 'does not create duplicate TXT records when the desired record already exists' {
             Mock Get-ParkRangerCloudflareDnsRecord {
                 [PSCustomObject]@{
