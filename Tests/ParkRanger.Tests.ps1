@@ -429,7 +429,13 @@ Describe 'Cloudflare MX record sync' {
             $result = Invoke-ParkRangerCloudflareMxRecordSync -Context $script:Context -Zone $zone -Record $record
 
             $result.Action | Should -Be 'Created'
-            Should -Invoke Invoke-ParkRangerCloudflareRequest -Exactly 1 -ParameterFilter { $Method -eq 'Post' }
+            Should -Invoke Invoke-ParkRangerCloudflareRequest -Exactly 1 -ParameterFilter {
+                $Method -eq 'Post' -and
+                $Body.type -eq 'MX' -and
+                $Body.name -eq 'example.com' -and
+                $Body.content -eq '.' -and
+                $Body.priority -eq 0
+            }
         }
     }
 }
