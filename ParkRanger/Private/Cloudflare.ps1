@@ -242,18 +242,17 @@ function Test-ParkRangerCloudflareZoneHasMxRecord {
         [object]$Zone
     )
 
-    $response = Invoke-ParkRangerCloudflareRequest -Context $Context -Method Get -Path "zones/$($Zone.Id)/dns_records" -Query @{
-        type     = 'MX'
-        page     = 1
-        per_page = 100
-    }
+    # Use paged result to iterate all pages of MX records
+    $records = Get-ParkRangerCloudflarePagedResult -Context $Context -Path "zones/$($Zone.Id)/dns_records" -Query @{ type = 'MX' }
 
-    $resultItems = if ($null -eq $response.result) { @() } else { @($response.result) }
+    foreach ($record in $records) {
+        # Cloudflare returns priority as a separate property (can be 0 for Null MX)
+        # Test for null rather than truthiness since 0 is falsey in PowerShell
+        $priority = if ($null -ne $record.priority) { [int]$record.priority } elseif ($record.content -match '^\s*(\d+)\s+') { [int]$matches[1] } else { -1 }
 
-    # Check if any MX record is NOT a Null MX (priority 0, exchange ".")
-    foreach ($record in $resultItems) {
-        $priority = if ($record.priority) { [int]$record.priority } elseif ($record.content -match '^\s*(\d+)\s+') { [int]$matches[1] } else { -1 }
-        $exchange = if ($record.exchange) { $record.exchange.Trim() } elseif ($record.content -match '^\s*\d+\s+(\S+)') { $matches[1].Trim() } else { $record.content.Trim() }
+        # Cloudflare returns the exchange target in 'content' property, not 'exchange'
+        # Null MX has content = "." (or "0 ." with priority 0)
+        $exchange = if ($null -ne $record.exchange) { $record.exchange.Trim() } elseif ($record.content -match '^\s*\d+\s+(\S+)') { $matches[1].Trim() } else { $record.content.Trim() }
 
         # Null MX has priority 0 and exchange "."
         if ($priority -ne 0 -or $exchange -ne '.') {
