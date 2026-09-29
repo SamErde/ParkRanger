@@ -244,15 +244,15 @@ function Test-ParkRangerCloudflareZoneHasMxRecord {
     $response = Invoke-ParkRangerCloudflareRequest -Context $Context -Method Get -Path "zones/$($Zone.Id)/dns_records" -Query @{
         type     = 'MX'
         page     = 1
-        per_page = 1
-    }
-
-    if ($null -ne $response.result_info -and $null -ne $response.result_info.total_count) {
-        return [int]$response.result_info.total_count -gt 0
+        per_page = 50
     }
 
     $resultItems = if ($null -eq $response.result) { @() } else { @($response.result) }
-    $resultItems.Count -gt 0
+
+    # Check if there are any MX records that are NOT the managed Null MX (content='.' and priority=0)
+    $hasRealMx = $resultItems | Where-Object { $_.content -ne '.' -or $_.priority -ne 0 } | Measure-Object | Select-Object -ExpandProperty Count
+
+    return $hasRealMx -gt 0
 }
 
 function ConvertTo-ParkRangerCloudflareRecordName {
@@ -409,8 +409,14 @@ function Invoke-ParkRangerCloudflareMxRecordSync {
     $recordName = ConvertTo-ParkRangerCloudflareRecordName -RecordName $Record.Name -ZoneName $Zone.Name
     $existingRecords = Get-ParkRangerCloudflareDnsRecord -Context $Context -ZoneId $Zone.Id -RecordType MX -RecordName $recordName
 
-    # For Null MX, we match on the exact content "0 ."
-    $match = $existingRecords | Where-Object { $_.content -eq $Record.Content } | Select-Object -First 1
+    # Reject if any existing MX record differs from the desired Null MX
+    $conflict = $existingRecords | Where-Object { $_.content -ne '.' -or $_.priority -ne 0 } | Select-Object -First 1
+    if ($null -ne $conflict) {
+        throw "Cannot create Null MX record because a different MX record already exists for '$recordName'."
+    }
+
+    # For Null MX, match on content '.' and priority 0
+    $match = $existingRecords | Where-Object { $_.content -eq '.' -and $_.priority -eq 0 } | Select-Object -First 1
 
     if ($null -ne $match) {
         return [PSCustomObject]@{
@@ -423,7 +429,7 @@ function Invoke-ParkRangerCloudflareMxRecordSync {
     $body = @{
         type     = 'MX'
         name     = $recordName
-        content  = $Record.Content
+        content  = '.'
         ttl      = $Record.Ttl
         priority = 0
     }

@@ -13,7 +13,8 @@ Describe 'ParkRanger records' {
             $records | Should -HaveCount 4
             $records[0].Type | Should -BeExactly 'MX'
             $records[0].Name | Should -BeExactly '@'
-            $records[0].Content | Should -BeExactly '0 .'
+            $records[0].Content | Should -BeExactly '.'
+            $records[0].Priority | Should -BeExactly 0
             $records[1].Type | Should -BeExactly 'TXT'
             $records[1].Name | Should -BeExactly '@'
             $records[1].Content | Should -BeExactly 'v=spf1 -all'
@@ -148,6 +149,69 @@ Describe 'Cloudflare API helpers' {
 
             Test-ParkRangerCloudflareZoneHasMxRecord -Context $script:Context -Zone $zone | Should -BeTrue
             Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=1' -and $Uri -match 'type=MX' }
+        }
+
+        It 'returns false when only the managed Null MX exists' {
+            Mock Invoke-RestMethod {
+                [PSCustomObject]@{
+                    success = $true
+                    result  = @(
+                        [PSCustomObject]@{
+                            id       = 'mx-1'
+                            name     = 'example.com'
+                            type     = 'MX'
+                            content  = '.'
+                            priority = 0
+                        }
+                    )
+                    result_info = [PSCustomObject]@{
+                        total_count = 1
+                    }
+                }
+            }
+
+            $zone = [PSCustomObject]@{
+                Id   = 'zone-1'
+                Name = 'example.com'
+            }
+
+            Test-ParkRangerCloudflareZoneHasMxRecord -Context $script:Context -Zone $zone | Should -BeFalse
+            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=50' -and $Uri -match 'type=MX' }
+        }
+
+        It 'returns true when a real MX record exists alongside Null MX' {
+            Mock Invoke-RestMethod {
+                [PSCustomObject]@{
+                    success = $true
+                    result  = @(
+                        [PSCustomObject]@{
+                            id       = 'mx-1'
+                            name     = 'example.com'
+                            type     = 'MX'
+                            content  = '.'
+                            priority = 0
+                        }
+                        [PSCustomObject]@{
+                            id       = 'mx-2'
+                            name     = 'example.com'
+                            type     = 'MX'
+                            content  = 'mail.example.com'
+                            priority = 10
+                        }
+                    )
+                    result_info = [PSCustomObject]@{
+                        total_count = 2
+                    }
+                }
+            }
+
+            $zone = [PSCustomObject]@{
+                Id   = 'zone-1'
+                Name = 'example.com'
+            }
+
+            Test-ParkRangerCloudflareZoneHasMxRecord -Context $script:Context -Zone $zone | Should -BeTrue
+            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=50' -and $Uri -match 'type=MX' }
         }
 
         It 'does not create duplicate TXT records when the desired record already exists' {
@@ -378,10 +442,11 @@ Describe 'Cloudflare MX record sync' {
         It 'does not create duplicate MX records when the Null MX already exists' {
             Mock Get-ParkRangerCloudflareDnsRecord {
                 [PSCustomObject]@{
-                    id      = 'mx-1'
-                    name    = 'example.com'
-                    type    = 'MX'
-                    content = '0 .'
+                    id       = 'mx-1'
+                    name     = 'example.com'
+                    type     = 'MX'
+                    content  = '.'
+                    priority = 0
                 }
             }
             Mock Invoke-ParkRangerCloudflareRequest {
@@ -393,10 +458,11 @@ Describe 'Cloudflare MX record sync' {
                 Name = 'example.com'
             }
             $record = [PSCustomObject]@{
-                Name    = '@'
-                Content = '0 .'
-                Ttl     = 3600
-                Type    = 'MX'
+                Name     = '@'
+                Content  = '.'
+                Priority = 0
+                Ttl      = 3600
+                Type     = 'MX'
             }
 
             $result = Invoke-ParkRangerCloudflareMxRecordSync -Context $script:Context -Zone $zone -Record $record
@@ -420,22 +486,62 @@ Describe 'Cloudflare MX record sync' {
                 Name = 'example.com'
             }
             $record = [PSCustomObject]@{
-                Name    = '@'
-                Content = '0 .'
-                Ttl     = 3600
-                Type    = 'MX'
+                Name     = '@'
+                Content  = '.'
+                Priority = 0
+                Ttl      = 3600
+                Type     = 'MX'
             }
 
             $result = Invoke-ParkRangerCloudflareMxRecordSync -Context $script:Context -Zone $zone -Record $record
 
             $result.Action | Should -Be 'Created'
-            Should -Invoke Invoke-ParkRangerCloudflareRequest -Exactly 1 -ParameterFilter {
-                $Method -eq 'Post' -and
-                $Body.type -eq 'MX' -and
-                $Body.name -eq 'example.com' -and
-                $Body.content -eq '.' -and
-                $Body.priority -eq 0
-            }
+            Should -Invoke Invoke-ParkRangerCloudflareRequest -Exactly 1 -ParameterFilter {
+
+                $Method -eq 'Post' -and
+
+                $Body.type -eq 'MX' -and
+
+                $Body.name -eq 'example.com' -and
+
+                $Body.content -eq '.' -and
+
+                $Body.priority -eq 0
+
+            }
+
+        }
+
+        It 'throws when a different MX record already exists' {
+            Mock Get-ParkRangerCloudflareDnsRecord {
+                [PSCustomObject]@{
+                    id       = 'mx-1'
+                    name     = 'example.com'
+                    type     = 'MX'
+                    content  = 'mail.example.com'
+                    priority = 10
+                }
+            }
+            Mock Invoke-ParkRangerCloudflareRequest {
+                throw 'No write request should be made.'
+            }
+
+            $zone = [PSCustomObject]@{
+                Id   = 'zone-1'
+                Name = 'example.com'
+            }
+            $record = [PSCustomObject]@{
+                Name     = '@'
+                Content  = '.'
+                Priority = 0
+                Ttl      = 3600
+                Type     = 'MX'
+            }
+
+            {
+                Invoke-ParkRangerCloudflareMxRecordSync -Context $script:Context -Zone $zone -Record $record
+            } | Should -Throw '*Cannot create Null MX record because a different MX record already exists*'
+            Should -Invoke Invoke-ParkRangerCloudflareRequest -Exactly 0
         }
     }
 }
