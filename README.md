@@ -1,3 +1,5 @@
+![ParkRanger — Steward your parked domains.](assets/brand/final/parkranger-banner.png)
+
 # ParkRanger
 
 **Formerly known as *Zero Email Domain*.**
