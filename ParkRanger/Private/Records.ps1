@@ -8,6 +8,15 @@ function Get-ParkRangerDesiredEmailProtectionRecordSet {
     )
 
     [PSCustomObject]@{
+        Type        = 'MX'
+        Name        = '@'
+        Content     = '.'
+        Priority    = 0
+        Ttl         = $Ttl
+        MatchPrefix = '.'
+    }
+
+    [PSCustomObject]@{
         Type        = 'TXT'
         Name        = '@'
         Content     = 'v=spf1 -all'

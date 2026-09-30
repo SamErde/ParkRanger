@@ -134,7 +134,7 @@ function Test-ParkRangerDnsZoneHasMxRecord {
     }
 }
 
-function Invoke-ParkRangerDnsTxtRecordSync {
+function Invoke-ParkRangerDnsRecordSync {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -149,7 +149,12 @@ function Invoke-ParkRangerDnsTxtRecordSync {
 
     switch ($Context.Provider) {
         'Cloudflare' {
-            Invoke-ParkRangerCloudflareTxtRecordSync -Context $Context -Zone $Zone -Record $Record
+            if ($Record.Type -eq 'MX') {
+                Invoke-ParkRangerCloudflareMxRecordSync -Context $Context -Zone $Zone -Record $Record
+            }
+            else {
+                Invoke-ParkRangerCloudflareTxtRecordSync -Context $Context -Zone $Zone -Record $Record
+            }
         }
         default {
             throw [System.NotSupportedException]::new("Provider '$($Context.Provider)' is not implemented.")
