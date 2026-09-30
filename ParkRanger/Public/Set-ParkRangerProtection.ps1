@@ -116,7 +116,7 @@ function Set-ParkRangerProtection {
                         continue
                     }
 
-                    $result = Invoke-ParkRangerDnsTxtRecordSync -Context $providerContext -Zone $zone -Record $record
+                    $result = Invoke-ParkRangerDnsRecordSync -Context $providerContext -Zone $zone -Record $record
 
                     if ($PassThru.IsPresent) {
                         [PSCustomObject]@{

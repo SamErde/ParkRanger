@@ -3,7 +3,7 @@
 **Formerly known as *Zero Email Domain*.**
 
 ParkRanger automatically creates "reject all" SPF, DKIM, and DMARC DNS records
-in domains that contain no MX records (Null MX records are treated as no MX records).
+in domains that contain no MX records.
 
 The project is a PowerShell module plus thin command scripts. The current
 implementation supports Cloudflare and is designed so other DNS providers can be
@@ -54,15 +54,18 @@ Limit processing to specific zones:
 
 ## Records
 
-For zones without MX records (or with only Null MX records), the command creates or updates these TXT records:
+For zones without MX records or with only a Null MX, the command creates or
+updates these records:
 
-| Purpose | Name           | Content                                                |
-| ------- | -------------- | ------------------------------------------------------ |
-| SPF     | `@`            | `v=spf1 -all`                                         |
-| DKIM    | `*._domainkey` | `v=DKIM1; p=`                                         |
-| DMARC   | `_dmarc`       | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s`      |
+| Purpose | Type | Name           | Content                                                |
+| ------- | ---- | -------------- | ------------------------------------------------------ |
+| Null MX | MX   | `@`            | `0 .`                                                  |
+| SPF     | TXT  | `@`            | `v=spf1 -all`                                         |
+| DKIM    | TXT  | `*._domainkey` | `v=DKIM1; p=`                                         |
+| DMARC   | TXT  | `_dmarc`       | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s`      |
 
-The command skips zones that already have non-Null MX records. A Null MX record (priority 0, exchange ".") is treated as if no MX record exists.
+The command skips zones with non-Null MX records. A Null MX record (priority
+`0`, exchange `.`) is treated as no MX record.
 
 ## Provider support
 
