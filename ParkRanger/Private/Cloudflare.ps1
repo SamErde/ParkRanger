@@ -233,6 +233,7 @@ function Get-ParkRangerCloudflareDnsRecord {
 
 function Test-ParkRangerCloudflareZoneHasMxRecord {
     [CmdletBinding()]
+    [OutputType([bool])]
     param(
         [Parameter(Mandatory)]
         [object]$Context,
