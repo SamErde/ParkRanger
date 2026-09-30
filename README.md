@@ -54,15 +54,18 @@ Limit processing to specific zones:
 
 ## Records
 
-For zones without MX records, the command creates or updates these TXT records:
+For zones without MX records or with only a Null MX, the command creates or
+updates these records:
 
-| Purpose | Name           | Content                                                |
-| ------- | -------------- | ------------------------------------------------------ |
-| SPF     | `@`            | `v=spf1 -all`                                         |
-| DKIM    | `*._domainkey` | `v=DKIM1; p=`                                         |
-| DMARC   | `_dmarc`       | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s`      |
+| Purpose | Type | Name           | Content                                                |
+| ------- | ---- | -------------- | ------------------------------------------------------ |
+| Null MX | MX   | `@`            | `0 .`                                                  |
+| SPF     | TXT  | `@`            | `v=spf1 -all`                                         |
+| DKIM    | TXT  | `*._domainkey` | `v=DKIM1; p=`                                         |
+| DMARC   | TXT  | `_dmarc`       | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s`      |
 
-The command skips zones that already have MX records.
+The command skips zones with non-Null MX records. A Null MX record (priority
+`0`, exchange `.`) is treated as no MX record.
 
 ## Provider support
 
@@ -97,7 +100,7 @@ Invoke-Pester -Path .\Tests
 
 - [ ] Add domain status detection for dormant, non-sending, active, and mixed
       zones.
-- [ ] Add null MX support for domains that do not receive mail.
+- [x] Add null MX support for domains that do not receive mail.
 - [ ] Add CAA policy support for dormant-domain lockdown and app-domain CA
       restriction.
 - [ ] Add subdomain takeover and stale DNS record audits.

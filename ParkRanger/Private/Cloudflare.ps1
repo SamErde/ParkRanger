@@ -233,6 +233,7 @@ function Get-ParkRangerCloudflareDnsRecord {
 
 function Test-ParkRangerCloudflareZoneHasMxRecord {
     [CmdletBinding()]
+    [OutputType([bool])]
     param(
         [Parameter(Mandatory)]
         [object]$Context,
@@ -241,18 +242,12 @@ function Test-ParkRangerCloudflareZoneHasMxRecord {
         [object]$Zone
     )
 
-    $response = Invoke-ParkRangerCloudflareRequest -Context $Context -Method Get -Path "zones/$($Zone.Id)/dns_records" -Query @{
-        type     = 'MX'
-        page     = 1
-        per_page = 1
-    }
+    $records = Get-ParkRangerCloudflareDnsRecord -Context $Context -ZoneId $Zone.Id -RecordType MX
+    $hasRealMx = $records |
+        Where-Object { $_.content -ne '.' -or $_.priority -ne 0 } |
+        Select-Object -First 1
 
-    if ($null -ne $response.result_info -and $null -ne $response.result_info.total_count) {
-        return [int]$response.result_info.total_count -gt 0
-    }
-
-    $resultItems = if ($null -eq $response.result) { @() } else { @($response.result) }
-    $resultItems.Count -gt 0
+    return $null -ne $hasRealMx
 }
 
 function ConvertTo-ParkRangerCloudflareRecordName {
@@ -382,6 +377,56 @@ function Invoke-ParkRangerCloudflareTxtRecordSync {
             Id     = $response.result.id
             Name   = $recordName
         }
+    }
+
+    $createResponse = Invoke-ParkRangerCloudflareRequest -Context $Context -Method Post -Path "zones/$($Zone.Id)/dns_records" -Body $body
+
+    [PSCustomObject]@{
+        Action = 'Created'
+        Id     = $createResponse.result.id
+        Name   = $recordName
+    }
+}
+
+function Invoke-ParkRangerCloudflareMxRecordSync {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [object]$Context,
+
+        [Parameter(Mandatory)]
+        [object]$Zone,
+
+        [Parameter(Mandatory)]
+        [object]$Record
+    )
+
+    $recordName = ConvertTo-ParkRangerCloudflareRecordName -RecordName $Record.Name -ZoneName $Zone.Name
+    $existingRecords = Get-ParkRangerCloudflareDnsRecord -Context $Context -ZoneId $Zone.Id -RecordType MX -RecordName $recordName
+
+    # Reject if any existing MX record differs from the desired Null MX
+    $conflict = $existingRecords | Where-Object { $_.content -ne '.' -or $_.priority -ne 0 } | Select-Object -First 1
+    if ($null -ne $conflict) {
+        throw "Cannot create Null MX record because a different MX record already exists for '$recordName'."
+    }
+
+    # For Null MX, match on content '.' and priority 0
+    $match = $existingRecords | Where-Object { $_.content -eq '.' -and $_.priority -eq 0 } | Select-Object -First 1
+
+    if ($null -ne $match) {
+        return [PSCustomObject]@{
+            Action = 'Unchanged'
+            Id     = $match.id
+            Name   = $recordName
+        }
+    }
+
+    $body = @{
+        type     = 'MX'
+        name     = $recordName
+        content  = '.'
+        ttl      = $Record.Ttl
+        priority = 0
     }
 
     $createResponse = Invoke-ParkRangerCloudflareRequest -Context $Context -Method Post -Path "zones/$($Zone.Id)/dns_records" -Body $body
