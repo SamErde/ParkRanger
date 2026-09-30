@@ -135,7 +135,15 @@ Describe 'Cloudflare API helpers' {
             Mock Invoke-RestMethod {
                 [PSCustomObject]@{
                     success     = $true
-                    result      = @()
+                    result      = @(
+                        [PSCustomObject]@{
+                            id       = 'mx-1'
+                            name     = 'example.com'
+                            type     = 'MX'
+                            content  = 'mail.example.com'
+                            priority = 10
+                        }
+                    )
                     result_info = [PSCustomObject]@{
                         total_count = 1
                     }
@@ -148,7 +156,34 @@ Describe 'Cloudflare API helpers' {
             }
 
             Test-ParkRangerCloudflareZoneHasMxRecord -Context $script:Context -Zone $zone | Should -BeTrue
-            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=1' -and $Uri -match 'type=MX' }
+            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=50' -and $Uri -match 'type=MX' }
+        }
+
+        It 'assumes MX records exist when the response is incomplete' {
+            Mock Invoke-RestMethod {
+                [PSCustomObject]@{
+                    success = $true
+                    result  = @(
+                        [PSCustomObject]@{
+                            id       = 'mx-1'
+                            name     = 'example.com'
+                            type     = 'MX'
+                            content  = '.'
+                            priority = 0
+                        }
+                    )
+                    result_info = [PSCustomObject]@{
+                        total_count = 2
+                    }
+                }
+            }
+
+            $zone = [PSCustomObject]@{
+                Id   = 'zone-1'
+                Name = 'example.com'
+            }
+
+            Test-ParkRangerCloudflareZoneHasMxRecord -Context $script:Context -Zone $zone | Should -BeTrue
         }
 
         It 'returns false when only the managed Null MX exists' {

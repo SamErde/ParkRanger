@@ -248,6 +248,11 @@ function Test-ParkRangerCloudflareZoneHasMxRecord {
     }
 
     $resultItems = if ($null -eq $response.result) { @() } else { @($response.result) }
+    if ($null -ne $response.result_info -and
+        $null -ne $response.result_info.total_count -and
+        [int]$response.result_info.total_count -gt $resultItems.Count) {
+        return $true
+    }
 
     # Check if there are any MX records that are NOT the managed Null MX (content='.' and priority=0)
     $hasRealMx = $resultItems | Where-Object { $_.content -ne '.' -or $_.priority -ne 0 } | Measure-Object | Select-Object -ExpandProperty Count
