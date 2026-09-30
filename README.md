@@ -54,7 +54,8 @@ Limit processing to specific zones:
 
 ## Records
 
-For zones without MX records, the command creates or updates these records:
+For zones without MX records or with only a Null MX, the command creates or
+updates these records:
 
 | Purpose | Type | Name           | Content                                                |
 | ------- | ---- | -------------- | ------------------------------------------------------ |
@@ -63,7 +64,8 @@ For zones without MX records, the command creates or updates these records:
 | DKIM    | TXT  | `*._domainkey` | `v=DKIM1; p=`                                         |
 | DMARC   | TXT  | `_dmarc`       | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s`      |
 
-The command skips zones that already have MX records.
+The command skips zones with non-Null MX records. A Null MX record (priority
+`0`, exchange `.`) is treated as no MX record.
 
 ## Provider support
 

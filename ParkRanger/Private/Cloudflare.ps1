@@ -242,23 +242,12 @@ function Test-ParkRangerCloudflareZoneHasMxRecord {
         [object]$Zone
     )
 
-    $response = Invoke-ParkRangerCloudflareRequest -Context $Context -Method Get -Path "zones/$($Zone.Id)/dns_records" -Query @{
-        type     = 'MX'
-        page     = 1
-        per_page = 50
-    }
+    $records = Get-ParkRangerCloudflareDnsRecord -Context $Context -ZoneId $Zone.Id -RecordType MX
+    $hasRealMx = $records |
+        Where-Object { $_.content -ne '.' -or $_.priority -ne 0 } |
+        Select-Object -First 1
 
-    $resultItems = if ($null -eq $response.result) { @() } else { @($response.result) }
-    if ($null -ne $response.result_info -and
-        $null -ne $response.result_info.total_count -and
-        [int]$response.result_info.total_count -gt $resultItems.Count) {
-        return $true
-    }
-
-    # Check if there are any MX records that are NOT the managed Null MX (content='.' and priority=0)
-    $hasRealMx = $resultItems | Where-Object { $_.content -ne '.' -or $_.priority -ne 0 } | Measure-Object | Select-Object -ExpandProperty Count
-
-    return $hasRealMx -gt 0
+    return $null -ne $hasRealMx
 }
 
 function ConvertTo-ParkRangerCloudflareRecordName {

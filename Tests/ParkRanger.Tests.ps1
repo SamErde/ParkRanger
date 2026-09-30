@@ -145,7 +145,8 @@ Describe 'Cloudflare API helpers' {
                         }
                     )
                     result_info = [PSCustomObject]@{
-                        total_count = 1
+                        page        = 1
+                        total_pages = 1
                     }
                 }
             }
@@ -156,24 +157,44 @@ Describe 'Cloudflare API helpers' {
             }
 
             Test-ParkRangerCloudflareZoneHasMxRecord -Context $script:Context -Zone $zone | Should -BeTrue
-            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=50' -and $Uri -match 'type=MX' }
+            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=2' -and $Uri -match 'type=MX' }
         }
 
-        It 'assumes MX records exist when the response is incomplete' {
+        It 'detects a non-Null MX record on a later page' {
             Mock Invoke-RestMethod {
+                if ($Uri -match 'page=1') {
+                    return [PSCustomObject]@{
+                        success = $true
+                        result  = @(
+                            [PSCustomObject]@{
+                                id       = 'mx-1'
+                                name     = 'example.com'
+                                type     = 'MX'
+                                content  = '.'
+                                priority = 0
+                            }
+                        )
+                        result_info = [PSCustomObject]@{
+                            page        = 1
+                            total_pages = 2
+                        }
+                    }
+                }
+
                 [PSCustomObject]@{
                     success = $true
                     result  = @(
                         [PSCustomObject]@{
-                            id       = 'mx-1'
+                            id       = 'mx-2'
                             name     = 'example.com'
                             type     = 'MX'
-                            content  = '.'
-                            priority = 0
+                            content  = 'mail.example.com'
+                            priority = 10
                         }
                     )
                     result_info = [PSCustomObject]@{
-                        total_count = 2
+                        page        = 2
+                        total_pages = 2
                     }
                 }
             }
@@ -184,6 +205,7 @@ Describe 'Cloudflare API helpers' {
             }
 
             Test-ParkRangerCloudflareZoneHasMxRecord -Context $script:Context -Zone $zone | Should -BeTrue
+            Should -Invoke Invoke-RestMethod -Exactly 2 -ParameterFilter { $Uri -match 'per_page=2' -and $Uri -match 'type=MX' }
         }
 
         It 'returns false when only the managed Null MX exists' {
@@ -200,7 +222,8 @@ Describe 'Cloudflare API helpers' {
                         }
                     )
                     result_info = [PSCustomObject]@{
-                        total_count = 1
+                        page        = 1
+                        total_pages = 1
                     }
                 }
             }
@@ -211,7 +234,7 @@ Describe 'Cloudflare API helpers' {
             }
 
             Test-ParkRangerCloudflareZoneHasMxRecord -Context $script:Context -Zone $zone | Should -BeFalse
-            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=50' -and $Uri -match 'type=MX' }
+            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=2' -and $Uri -match 'type=MX' }
         }
 
         It 'returns true when a real MX record exists alongside Null MX' {
@@ -235,7 +258,8 @@ Describe 'Cloudflare API helpers' {
                         }
                     )
                     result_info = [PSCustomObject]@{
-                        total_count = 2
+                        page        = 1
+                        total_pages = 1
                     }
                 }
             }
@@ -246,7 +270,7 @@ Describe 'Cloudflare API helpers' {
             }
 
             Test-ParkRangerCloudflareZoneHasMxRecord -Context $script:Context -Zone $zone | Should -BeTrue
-            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=50' -and $Uri -match 'type=MX' }
+            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -match 'per_page=2' -and $Uri -match 'type=MX' }
         }
 
         It 'does not create duplicate TXT records when the desired record already exists' {
