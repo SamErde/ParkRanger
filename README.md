@@ -1,4 +1,4 @@
-![ParkRanger — Steward your parked domains.](assets/brand/final/parkranger-banner.png)
+![ParkRanger — A steward for your parked domains.](assets/brand/final/parkranger-banner.png)
 
 # ParkRanger
 
