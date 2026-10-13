@@ -38,7 +38,7 @@ are retained outside the repository in the local image-generation archive.
 The wordmark uses a restrained traditional serif treatment. Keep the capital
 `P` and `R`; do not merge either letter into the symbol.
 
-> Steward your parked domains.
+> A steward for your parked domains.
 
 Use the tagline in banners and supporting material, not inside the primary
 logo or compact favicon.
