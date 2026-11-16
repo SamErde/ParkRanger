@@ -1,6 +1,6 @@
-![ParkRanger — A steward for your parked domains.](assets/brand/final/parkranger-banner.png)
-
 # ParkRanger
+
+![ParkRanger — A steward for your parked domains.](assets/brand/final/parkranger-banner.png)
 
 **Formerly known as *Zero Email Domain*.**
 
@@ -59,9 +59,9 @@ Limit processing to specific zones:
 For zones without MX records or with only a Null MX, the command creates or
 updates these records:
 
-| Purpose | Type | Name           | Content                                                |
-| ------- | ---- | -------------- | ------------------------------------------------------ |
-| Null MX | MX   | `@`            | `0 .`                                                  |
+| Purpose | Type | Name           | Content                                               |
+| ------- | ---- | -------------- | ----------------------------------------------------- |
+| Null MX | MX   | `@`            | `0 .`                                                 |
 | SPF     | TXT  | `@`            | `v=spf1 -all`                                         |
 | DKIM    | TXT  | `*._domainkey` | `v=DKIM1; p=`                                         |
 | DMARC   | TXT  | `_dmarc`       | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s`      |
@@ -71,13 +71,13 @@ The command skips zones with non-Null MX records. A Null MX record (priority
 
 ## Provider support
 
-| Provider     | Status      | Notes                                                               |
-| ------------ | ----------- | ------------------------------------------------------------------- |
-| Cloudflare   | Implemented | Uses the Cloudflare v4 REST API with tested paging.                 |
-| Azure DNS    | Planned     | Extension point registered for a future `Az.Dns` provider.          |
+| Provider     | Status      | Notes                                                                 |
+| ------------ | ----------- | --------------------------------------------------------------------- |
+| Cloudflare   | Implemented | Uses the Cloudflare v4 REST API with tested paging.                   |
+| Azure DNS    | Planned     | Extension point registered for a future `Az.Dns` provider.            |
 | AWS Route 53 | Planned     | Extension point registered for a future `AWS.Tools.Route53` provider. |
-| GoDaddy      | Planned     | Extension point registered for the GoDaddy Domains API.             |
-| Namecheap    | Planned     | Extension point registered for the Namecheap XML API.               |
+| GoDaddy      | Planned     | Extension point registered for the GoDaddy Domains API.               |
+| Namecheap    | Planned     | Extension point registered for the Namecheap XML API.                 |
 
 Unsupported providers fail closed with a clear error instead of silently doing
 nothing.
